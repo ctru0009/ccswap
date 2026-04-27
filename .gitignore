@@ -1,0 +1,24 @@
+# Binary
+ccswap
+*.exe
+
+# Go artifacts
+*.tar.gz
+
+# Project metadata (not source)
+.sisyphus/
+prd.md
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Vendor (if used)
+vendor/
