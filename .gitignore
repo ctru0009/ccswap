@@ -7,7 +7,6 @@ ccswap
 
 # Project metadata (not source)
 .sisyphus/
-prd.md
 
 # OS
 .DS_Store
