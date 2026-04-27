@@ -164,6 +164,8 @@ func TestInit_EnvVarPrefillApiKeyPreferred(t *testing.T) {
 
 func TestInit_ContainsTemplateDefaults(t *testing.T) {
 	dir := t.TempDir()
+	t.Setenv("ANTHROPIC_API_KEY", "")
+	t.Setenv("ANTHROPIC_AUTH_TOKEN", "")
 
 	root := newInitRootCmd()
 	root.SetArgs([]string{"--config", dir, "init"})
