@@ -24,7 +24,6 @@ go.work.sum
 
 # Project metadata (not source)
 .sisyphus/
-prd.md
 
 # env file
 .env
