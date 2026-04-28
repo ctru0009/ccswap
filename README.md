@@ -5,6 +5,7 @@
 `ccswap` is a fast, safe CLI for managing and switching between multiple Claude Code provider profiles (Anthropic, Z.ai, Ollama Cloud, OpenRouter, etc.). It updates your `~/.claude/settings.json` atomically — never touching permissions, MCP servers, or any other Claude Code configuration.
 
 [![Go Version](https://img.shields.io/badge/go-%3E%3D1.25-blue)](https://go.dev)
+[![CI](https://github.com/ctru0009/ccswap/actions/workflows/ci.yaml/badge.svg)](https://github.com/ctru0009/ccswap/actions/workflows/ci.yaml)
 
 ---
 
@@ -55,13 +56,19 @@ cd ccswap
 go build -o ccswap .
 ```
 
-### Pre-built binaries (soon)
+### Pre-built binaries
 
-Binary releases for Linux, macOS, and Windows will be available via GitHub Releases.
+Binary releases for Linux, macOS, and Windows are available via [GitHub Releases](https://github.com/ctru0009/ccswap/releases).
 
 ```bash
-# Coming soon:
 curl -sSL https://raw.githubusercontent.com/ctru0009/ccswap/main/install.sh | sh
+```
+
+Or download a specific version:
+
+```bash
+# Set version explicitly
+curl -sSL https://raw.githubusercontent.com/ctru0009/ccswap/main/install.sh | VERSION=v1.0.0 sh
 ```
 
 ---
@@ -302,7 +309,7 @@ Tests are fully isolated using `t.TempDir()` — no external services or shared 
 
 ## Roadmap
 
-- [ ] **Binary releases** — GitHub Actions + goreleaser for automatic cross-platform builds
+- [x] **Binary releases** — GitHub Actions + goreleaser for automatic cross-platform builds
 - [ ] **`ccswap watch`** — Detect Claude Code rate-limit errors and auto-switch providers
 - [ ] **`ccswap rotate`** — Cycle through a configured provider rotation
 - [x] ~~**Shell completions** — `bash`, `zsh`, `fish` tab completion for provider names~~
