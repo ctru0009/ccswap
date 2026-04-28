@@ -1,0 +1,17 @@
+providers:
+  anthropic:
+    auth_token: sk-ant-demo123456789
+    base_url: https://api.anthropic.com
+    timeout_ms: 600000
+    models:
+      sonnet: sonnet-4.6
+      opus: opus-4.7
+      haiku: haiku-4.5
+  zai:
+    auth_token: sk-zai-demo123456789
+    base_url: https://api.z.ai/api/anthropic
+    timeout_ms: 3000000
+    models:
+      sonnet: glm-5-turbo
+      opus: glm-5.1
+      haiku: glm-4.7
