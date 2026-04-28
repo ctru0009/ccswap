@@ -19,7 +19,8 @@ var useCmd = &cobra.Command{
 	Long: `Switch Claude Code to use the specified provider profile.
 Edits ~/.claude/settings.json to set the provider's auth token,
 base URL, and model configuration.`,
-	Args: cobra.ExactArgs(1),
+	Args:              cobra.ExactArgs(1),
+	ValidArgsFunction: completeProviderNames,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runUse(cmd, args[0])
 	},
@@ -105,6 +106,21 @@ func resolveConfigDir(cmd *cobra.Command) (string, error) {
 		return cf, nil
 	}
 	return config.ConfigDir(), nil
+}
+
+func completeProviderNames(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) != 0 {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+	configDir, err := resolveConfigDir(cmd)
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+	cfg, err := config.LoadProviders(providersPathFunc(configDir))
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+	return sortedProviderNames(cfg.Providers), cobra.ShellCompDirectiveNoFileComp
 }
 
 func sortedProviderNames(providers map[string]config.Provider) []string {

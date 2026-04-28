@@ -18,7 +18,8 @@ var editCmd = &cobra.Command{
 	Long: `Open the specified provider's configuration in your editor ($EDITOR).
 After editing, validates the result and updates providers.yaml.
 Provider name changes are not allowed — use remove + add instead.`,
-	Args: cobra.ExactArgs(1),
+	Args:              cobra.ExactArgs(1),
+	ValidArgsFunction: completeProviderNames,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runEdit(cmd, args[0])
 	},

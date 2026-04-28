@@ -16,28 +16,10 @@ var removeCmd = &cobra.Command{
 	Long: `Remove a provider profile from providers.yaml.
 
 If the provider is currently active, you will be prompted to confirm.`,
-	Args: cobra.ExactArgs(1),
+	Args:              cobra.ExactArgs(1),
+	ValidArgsFunction: completeProviderNames,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runRemove(cmd, args[0])
-	},
-	ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		if len(args) != 0 {
-			return nil, cobra.ShellCompDirectiveNoFileComp
-		}
-		configDir, err := resolveConfigDir(cmd)
-		if err != nil {
-			return nil, cobra.ShellCompDirectiveNoFileComp
-		}
-		providersPath := providersPathFunc(configDir)
-		cfg, err := config.LoadProviders(providersPath)
-		if err != nil {
-			return nil, cobra.ShellCompDirectiveNoFileComp
-		}
-		names := make([]string, 0, len(cfg.Providers))
-		for name := range cfg.Providers {
-			names = append(names, name)
-		}
-		return names, cobra.ShellCompDirectiveNoFileComp
 	},
 }
 

@@ -24,7 +24,6 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.CompletionOptions.DisableDefaultCmd = true
 	rootCmd.PersistentFlags().String("config", "", "path to config directory")
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(useCmd)
