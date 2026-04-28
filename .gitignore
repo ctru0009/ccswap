@@ -1,3 +1,6 @@
+# Goreleaser output
+dist/
+
 # Binary
 ccswap
 *.exe
