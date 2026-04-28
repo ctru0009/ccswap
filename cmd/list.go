@@ -68,7 +68,8 @@ func runList(cmd *cobra.Command) error {
 		provider := cfg.Providers[name]
 
 		displayName := name
-		if provider.BaseURL == activeBaseURL {
+		expanded, expandErr := config.ExpandProvider(provider)
+		if expandErr == nil && expanded.BaseURL == activeBaseURL {
 			displayName = cyan("*" + name)
 		}
 

@@ -233,3 +233,65 @@ func TestList_NoEnvSettings(t *testing.T) {
 		t.Errorf("providers should still be listed, got: %q", output)
 	}
 }
+
+func TestList_ActiveMarkerWithEnvVarExpansion(t *testing.T) {
+	configDir := t.TempDir()
+	claudeDir := t.TempDir()
+
+	// Provider uses env var for base_url
+	t.Setenv("CCSWAP_LIST_TEST_URL", "https://expanded.example.com/v1")
+	providersYAML := `providers:
+  envtest:
+    auth_token: "sk-ant-testkey123456"
+    base_url: "$CCSWAP_LIST_TEST_URL"
+    timeout_ms: 300000
+    models:
+      sonnet: "test-sonnet"
+      opus: "test-opus"
+      haiku: "test-haiku"
+`
+	writeTestProviders(t, configDir, providersYAML)
+
+	// settings.json has the expanded URL as active
+	settingsContent := `{
+		"env": {
+			"ANTHROPIC_BASE_URL": "https://expanded.example.com/v1"
+		}
+	}`
+	if err := os.MkdirAll(claudeDir, 0755); err != nil {
+		t.Fatalf("failed to create claude dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(claudeDir, "settings.json"), []byte(settingsContent), 0644); err != nil {
+		t.Fatalf("failed to write settings.json: %v", err)
+	}
+
+	origReadSettings := readSettingsFile
+	readSettingsFile = func(path string) (map[string]json.RawMessage, error) {
+		data, err := os.ReadFile(filepath.Join(claudeDir, "settings.json"))
+		if err != nil {
+			return nil, err
+		}
+		result := make(map[string]json.RawMessage)
+		if err := json.Unmarshal(data, &result); err != nil {
+			return nil, err
+		}
+		return result, nil
+	}
+	t.Cleanup(func() { readSettingsFile = origReadSettings })
+
+	root := newListRootCmd()
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"--config", configDir, "list"})
+
+	err := root.Execute()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	output := buf.String()
+	if !strings.Contains(output, "*envtest") {
+		t.Errorf("active provider with env var base_url should be marked with *, got: %q", output)
+	}
+}
