@@ -20,6 +20,7 @@ func newE2ERootCmd() *cobra.Command {
 	root.AddCommand(listCmd)
 	root.AddCommand(removeCmd)
 	root.AddCommand(editCmd)
+	root.AddCommand(importCmd)
 	return root
 }
 
@@ -36,6 +37,7 @@ func overridePathFuncs(t *testing.T, configDir, claudeDir string) {
 	origStatusProvidersPath := statusProvidersPath
 	origStatusStatePath := statusStatePath
 	origReadSettingsFile := readSettingsFile
+	origImportSettingsPath := importSettingsPath
 
 	providersPathFunc = func(dir string) string { return filepath.Join(dir, "providers.yaml") }
 	statePathFunc = func(dir string) string { return filepath.Join(dir, "state.yaml") }
@@ -47,6 +49,8 @@ func overridePathFuncs(t *testing.T, configDir, claudeDir string) {
 	statusSettingsPath = func() string { return filepath.Join(claudeDir, "settings.json") }
 	statusProvidersPath = func(dir string) string { return filepath.Join(dir, "providers.yaml") }
 	statusStatePath = func(dir string) string { return filepath.Join(dir, "state.yaml") }
+
+	importSettingsPath = func() string { return filepath.Join(claudeDir, "settings.json") }
 
 	readSettingsFile = func(path string) (map[string]json.RawMessage, error) {
 		data, err := os.ReadFile(filepath.Join(claudeDir, "settings.json"))
@@ -71,6 +75,7 @@ func overridePathFuncs(t *testing.T, configDir, claudeDir string) {
 		statusProvidersPath = origStatusProvidersPath
 		statusStatePath = origStatusStatePath
 		readSettingsFile = origReadSettingsFile
+		importSettingsPath = origImportSettingsPath
 	})
 }
 
@@ -396,5 +401,74 @@ func TestE2E_ConcurrentUseSimulated(t *testing.T) {
 	}
 	if env["ANTHROPIC_BASE_URL"] != "https://api.anthropic.com" {
 		t.Errorf("last use (anthropic) should be active, got ANTHROPIC_BASE_URL: %v", env["ANTHROPIC_BASE_URL"])
+	}
+}
+
+func TestE2E_ImportThenUse(t *testing.T) {
+	configDir := t.TempDir()
+	claudeDir := t.TempDir()
+	overridePathFuncs(t, configDir, claudeDir)
+
+	// Set up settings.json with a provider config not yet in providers.yaml
+	writeTestSettings(t, claudeDir, map[string]interface{}{
+		"env": map[string]string{
+			"ANTHROPIC_AUTH_TOKEN":            "sk-ant-imported-key12345",
+			"ANTHROPIC_BASE_URL":              "https://imported.example.com/v1",
+			"ANTHROPIC_DEFAULT_SONNET_MODEL":  "imported-sonnet",
+			"ANTHROPIC_DEFAULT_OPUS_MODEL":    "imported-opus",
+			"ANTHROPIC_DEFAULT_HAIKU_MODEL":   "imported-haiku",
+			"API_TIMEOUT_MS":                  "500000",
+		},
+	})
+
+	// Create empty providers.yaml
+	writeTestProviders(t, configDir, "providers: {}\n")
+
+	// Import the provider
+	root := newE2ERootCmd()
+	input := "imported-prov\n"
+	r, w, _ := os.Pipe()
+	root.SetIn(r)
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"--config", configDir, "import"})
+	go func() { w.WriteString(input); w.Close() }()
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("import failed: %v", err)
+	}
+	if !strings.Contains(buf.String(), "imported") {
+		t.Errorf("import should confirm success, got: %q", buf.String())
+	}
+
+	// Verify it was saved to providers.yaml
+	data, err := os.ReadFile(filepath.Join(configDir, "providers.yaml"))
+	if err != nil {
+		t.Fatalf("failed to read providers.yaml: %v", err)
+	}
+	content := string(data)
+	if !strings.Contains(content, "imported-prov") {
+		t.Errorf("providers.yaml should contain 'imported-prov', got: %s", content)
+	}
+	if !strings.Contains(content, "https://imported.example.com/v1") {
+		t.Errorf("providers.yaml should contain base_url, got: %s", content)
+	}
+
+	// Now use the imported provider
+	root = newE2ERootCmd()
+	if output, err := execCmd(root, "--config", configDir, "use", "imported-prov"); err != nil {
+		t.Fatalf("use imported-prov failed: %v", err)
+	} else if !strings.Contains(output, "Switched to imported-prov") {
+		t.Errorf("use should confirm switch, got: %q", output)
+	}
+
+	// Verify settings.json has the imported provider's values
+	settingsData, _ := os.ReadFile(filepath.Join(claudeDir, "settings.json"))
+	if !strings.Contains(string(settingsData), "https://imported.example.com/v1") {
+		t.Errorf("settings.json should have imported base URL, got: %s", string(settingsData))
+	}
+	if !strings.Contains(string(settingsData), "imported-sonnet") {
+		t.Errorf("settings.json should have imported sonnet model, got: %s", string(settingsData))
 	}
 }

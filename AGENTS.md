@@ -30,14 +30,16 @@ Tests use `t.TempDir()` for isolation — no shared fixtures, no external servic
 main.go              → entry point (just calls cmd.Execute())
 cmd/                 → cobra commands (one file per subcommand)
   root.go            → root command, panic→exit2 recovery, SilenceErrors
-  use.go             → ccswap use <provider>
+  use.go             → ccswap use <provider>, shared completeProviderNames
   status.go          → ccswap status
-  list.go            → ccswap list
+  list.go            → ccswap list (expands env vars for active-provider matching)
   add.go             → ccswap add (interactive)
   edit.go            → ccswap edit <provider> (opens $EDITOR)
   remove.go          → ccswap remove <provider>
-  init.go            → ccswap init
+  init.go            → ccswap init (prefills API key from env)
+  import.go          → ccswap import (detects env config from settings.json)
   integration_test.go→ end-to-end tests across commands
+  completion_test.go → shell completion tests
 internal/
   config/            → providers.yaml, state.yaml, paths, validation, env expansion
   claude/            → settings.json read/write/merge
@@ -51,7 +53,9 @@ internal/
 - **Atomic writes everywhere**: write to temp file → `os.Rename()` to final path. Applies to `settings.json`, `providers.yaml`, and `state.yaml`.
 - **Env var interpolation**: `os.ExpandEnv` applied to `auth_token`, `base_url`, and model names in `providers.yaml` via `$VAR` or `${VAR}` syntax. If `auth_token` is empty after expansion, the operation fails (prevents writing empty tokens).
 - **Exit codes**: 0 = success, 1 = user error, 2 = system error/panic. Implemented via `exitFunc` var in root.go (overridable in tests).
-- **Cobra CompletionOptions.DisableDefaultCmd = true**: shell completion subcommand is disabled (v1 scope decision).
+- **Shell completion**: `ccswap completion bash|zsh|fish|powershell` generates shell completion scripts. `use`, `edit`, and `remove` commands support tab-completion of provider names via `completeProviderNames` (defined in `use.go`).
+- **Owner-only permissions**: `SaveProviders` writes `providers.yaml` with mode `0600` (owner read/write only) to protect API keys in the file.
+- **Env var expansion in list**: `ccswap list` expands env vars in provider config before comparing to `settings.json` for active-provider detection, so providers using `$VAR` auth tokens still match correctly.
 
 ## Testing Patterns
 
@@ -59,6 +63,7 @@ internal/
 - **exitFunc override**: `root_test.go` overrides `exitFunc` to capture exit codes without killing the test process.
 - **Integration tests** in `cmd/integration_test.go` chain multiple commands (init → add → use → status) with fully overridden paths.
 - **Helper functions**: `writeTestProviders()`, `writeTestSettings()`, `newRootCmd()`, `newE2ERootCmd()`, `execCmd()`, `overridePathFuncs()` — reuse these, don't reinvent.
+- **Shell completion tests** in `cmd/completion_test.go` verify `completeProviderNames` returns correct provider list, handles already-argmented invocations, and handles missing providers file gracefully.
 
 ## The 6 Target Env Keys
 

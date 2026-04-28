@@ -56,6 +56,7 @@ Claude Code enforces a 5-hour usage window on Claude Pro/Max subscriptions. When
 | US-08 | CLI user | have the swap be non-destructive | My Claude Code permissions, MCP servers, and other settings are never touched |
 | US-09 | CLI user | run `ccswap use anthropic` after my limit resets | I can seamlessly return to native Claude without any manual steps |
 | US-10 | CLI user | see a confirmation after swapping | I know the swap succeeded before opening a new Claude Code session |
+| US-11 | CLI user | run `ccswap import` | I can save my existing Claude Code env config as a named provider without manual entry |
 
 ---
 
@@ -185,6 +186,47 @@ First-run setup. Creates `~/.config/ccswap/providers.yaml` with a commented temp
   Edit this file to add your providers, then run:
   ccswap list
   ccswap use <provider>
+```
+
+---
+
+#### `ccswap import`
+
+Detects existing provider configuration in `~/.claude/settings.json` and saves it as a named provider profile in `providers.yaml`.
+
+**Behaviour:**
+1. Reads `~/.claude/settings.json` and extracts the 6 target env keys
+2. If `ANTHROPIC_BASE_URL` is empty, prints a message and exits (no provider detected)
+3. Displays the detected configuration (base URL, models, masked auth token)
+4. If the detected `ANTHROPIC_BASE_URL` matches an existing provider's expanded base URL, suggests running `ccswap use <provider>` instead
+5. Prompts for a provider name interactively
+6. Validates the name and checks for duplicates
+7. Saves the provider to `providers.yaml`
+
+**Output example (provider detected):**
+```
+→ Detected provider configuration:
+  Base URL:  https://api.anthropic.com
+  Sonnet:    claude-sonnet-4-20250514
+  Opus:      claude-opus-4-20250514
+  Haiku:     claude-haiku-3-5-20250101
+  Auth:      sk-ant-...y456
+  Timeout:   600000 ms
+
+Provider name: anthropic
+✓ Provider anthropic imported. Run: ccswap use anthropic
+```
+
+**Output example (matches existing provider):**
+```
+This configuration matches provider anthropic.
+Run ccswap use anthropic to switch to it.
+```
+
+**Output example (no provider configured):**
+```
+No provider configuration found in settings.json.
+Run `ccswap add` to add a provider manually.
 ```
 
 ---
@@ -325,7 +367,8 @@ ccswap/
 │   ├── add.go               # ccswap add (interactive)
 │   ├── remove.go            # ccswap remove <provider>
 │   ├── edit.go              # ccswap edit <provider>
-│   └── init.go              # ccswap init
+│   ├── init.go              # ccswap init
+│   └── import.go            # ccswap import (detects env config from settings.json)
 ├── internal/
 │   ├── config/
 │   │   ├── providers.go     # load/save providers.yaml
@@ -404,7 +447,7 @@ mv ccswap ~/.local/bin/
 | Milestone | Scope | Target |
 |-----------|-------|--------|
 | M1 — Core | `use`, `status`, `list`, `init` commands + merge logic | Week 1 |
-| M2 — Management | `add`, `remove`, `edit` commands + validation | Week 2 |
+| M2 — Management | `add`, `remove`, `edit`, `import` commands + validation | Week 2 |
 | M3 — Polish | Coloured output, table formatting, backup logic, cross-platform testing | Week 2-3 |
 | M4 — Release | README, install script, GitHub Actions release pipeline | Week 3 |
 
@@ -436,5 +479,4 @@ mv ccswap ~/.local/bin/
 - **`ccswap watch`** — tail Claude Code logs, detect 5-hour limit error, auto-swap to next provider in a configured rotation
 - **`ccswap rotate`** — define a provider rotation order, cycle through on demand
 - **Keychain integration** — store API keys in OS keychain (libsecret on Linux, Keychain on macOS, Credential Manager on Windows) instead of plaintext YAML
-- **`ccswap import`** — detect existing `ANTHROPIC_BASE_URL` in `settings.json` and offer to save it as a named provider
 - **Shell completions** — `ccswap completion bash/zsh/fish` for provider name tab completion (v2 only; v1 guardrail disables the default `completion` subcommand to avoid scope creep)
