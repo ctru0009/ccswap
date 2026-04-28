@@ -287,3 +287,36 @@ func TestRemove_ActiveProviderCapitalY(t *testing.T) {
 		t.Errorf("output should contain checkmark for 'Y', got: %q", output)
 	}
 }
+
+func TestRemove_MalformedStateYAML(t *testing.T) {
+	configDir := t.TempDir()
+	writeTestProviders(t, configDir, validProvidersYAML)
+
+	// Write malformed state.yaml (unclosed bracket is invalid YAML)
+	if err := os.WriteFile(filepath.Join(configDir, "state.yaml"), []byte("active_provider: [\n"), 0644); err != nil {
+		t.Fatalf("failed to write state.yaml: %v", err)
+	}
+
+	root := newRemoveRootCmd()
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"--config", configDir, "remove", "zai"})
+
+	origProvidersPath := providersPathFunc
+	origStatePath := statePathFunc
+	providersPathFunc = func(dir string) string { return filepath.Join(dir, "providers.yaml") }
+	statePathFunc = func(dir string) string { return filepath.Join(dir, "state.yaml") }
+	t.Cleanup(func() {
+		providersPathFunc = origProvidersPath
+		statePathFunc = origStatePath
+	})
+
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("expected error for malformed state.yaml, got nil")
+	}
+	if !strings.Contains(err.Error(), "state") {
+		t.Errorf("error should mention 'state', got: %v", err)
+	}
+}

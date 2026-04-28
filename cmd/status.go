@@ -36,9 +36,7 @@ func runStatus(cmd *cobra.Command) error {
 
 	settings, err := claude.ReadSettings(statusSettingsPath())
 	if err != nil {
-		out := cmd.ErrOrStderr()
-		fmt.Fprintln(out, "No provider configured. Run `ccswap init`")
-		return nil
+		return fmt.Errorf("reading settings: %w", err)
 	}
 
 	var envMap map[string]string
@@ -80,7 +78,10 @@ func runStatus(cmd *cobra.Command) error {
 	}
 
 	statePath := statusStatePath(configDir)
-	state, _ := config.LoadState(statePath)
+	state, err := config.LoadState(statePath)
+	if err != nil {
+		return fmt.Errorf("loading state: %w", err)
+	}
 
 	out := cmd.OutOrStdout()
 	cyan := color.New(color.FgCyan, color.Bold).SprintFunc()

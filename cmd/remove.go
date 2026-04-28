@@ -60,7 +60,10 @@ func runRemove(cmd *cobra.Command, providerName string) error {
 		return fmt.Errorf("provider %q not found\nAvailable providers: %s", providerName, strings.Join(names, ", "))
 	}
 
-	state, _ := config.LoadState(statePath)
+	state, err := config.LoadState(statePath)
+	if err != nil {
+		return fmt.Errorf("loading state: %w", err)
+	}
 	if state.ActiveProvider == providerName {
 		fmt.Fprintf(cmd.ErrOrStderr(), "Provider %s is currently active. Remove anyway? [y/N]: ", providerName)
 		scanner := bufio.NewScanner(cmd.InOrStdin())

@@ -306,6 +306,49 @@ func TestStatus_ExitCodeZero(t *testing.T) {
 	}
 }
 
+func TestStatus_MalformedStateYAML(t *testing.T) {
+	configDir := t.TempDir()
+	claudeDir := t.TempDir()
+	writeTestProviders(t, configDir, validProvidersYAML)
+	writeTestSettings(t, claudeDir, map[string]interface{}{
+		"env": map[string]string{
+			"ANTHROPIC_BASE_URL":   "https://example.com/v1",
+			"ANTHROPIC_AUTH_TOKEN": "sk-ant-abc123key456",
+		},
+	})
+
+	// Write malformed state.yaml (unclosed bracket is invalid YAML)
+	if err := os.WriteFile(filepath.Join(configDir, "state.yaml"), []byte("active_provider: [\n"), 0644); err != nil {
+		t.Fatalf("failed to write state.yaml: %v", err)
+	}
+
+	root := newStatusRootCmd()
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"--config", configDir, "status"})
+
+	origSettingsPath := statusSettingsPath
+	origProvidersPath := statusProvidersPath
+	origStatePath := statusStatePath
+	statusSettingsPath = func() string { return filepath.Join(claudeDir, "settings.json") }
+	statusProvidersPath = func(dir string) string { return filepath.Join(dir, "providers.yaml") }
+	statusStatePath = func(dir string) string { return filepath.Join(dir, "state.yaml") }
+	t.Cleanup(func() {
+		statusSettingsPath = origSettingsPath
+		statusProvidersPath = origProvidersPath
+		statusStatePath = origStatePath
+	})
+
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("expected error for malformed state.yaml, got nil")
+	}
+	if !strings.Contains(err.Error(), "state") {
+		t.Errorf("error should mention 'state', got: %v", err)
+	}
+}
+
 func TestStatus_EmptyLastSwitched(t *testing.T) {
 	configDir := t.TempDir()
 	claudeDir := t.TempDir()
@@ -352,5 +395,35 @@ func TestStatus_EmptyLastSwitched(t *testing.T) {
 	}
 	if !strings.Contains(output, "zai") {
 		t.Errorf("output should still show provider info, got: %q", output)
+	}
+}
+
+func TestStatus_CorruptSettingsJSON(t *testing.T) {
+	configDir := t.TempDir()
+	claudeDir := t.TempDir()
+	if err := os.MkdirAll(claudeDir, 0755); err != nil {
+		t.Fatalf("failed to create claude dir: %v", err)
+	}
+	// Write malformed JSON to settings.json
+	if err := os.WriteFile(filepath.Join(claudeDir, "settings.json"), []byte("{invalid}"), 0644); err != nil {
+		t.Fatalf("failed to write settings.json: %v", err)
+	}
+
+	root := newStatusRootCmd()
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"--config", configDir, "status"})
+
+	origSettingsPath := statusSettingsPath
+	statusSettingsPath = func() string { return filepath.Join(claudeDir, "settings.json") }
+	t.Cleanup(func() { statusSettingsPath = origSettingsPath })
+
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("expected error for corrupt settings.json, got nil")
+	}
+	if !strings.Contains(err.Error(), "settings") {
+		t.Errorf("error should mention 'settings', got: %v", err)
 	}
 }
