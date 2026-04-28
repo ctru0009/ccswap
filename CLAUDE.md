@@ -12,7 +12,10 @@ go test -run TestUse_Success ./cmd/...  # single test by pattern
 go test -run TestE2E ./cmd/...      # integration tests only
 ```
 
-No Makefile, no CI, no Docker. Go 1.25+ required. All tests use `t.TempDir()` — no external services.
+CI: GitHub Actions (`.github/workflows/ci.yaml`) — test+vet on push/PR.
+Releases: push `v*` tag → goreleaser (`.goreleaser.yaml`) builds 5 platform binaries → automatic GitHub Release.
+Install: `install.sh` or download from Releases.
+Go 1.25+ required. All tests use `t.TempDir()` — no external services.
 
 ## Architecture
 

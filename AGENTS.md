@@ -9,7 +9,10 @@ go build -o ccswap .       # build binary
 go install .               # install to $GOPATH/bin
 ```
 
-No Makefile, no Docker, no CI. Go 1.25+ required (per `go.mod`).
+CI via GitHub Actions (`.github/workflows/ci.yaml`): runs `go test ./...` and `go vet ./...` on every push/PR.
+Releases via goreleaser (`.goreleaser.yaml`): push a `v*` tag to trigger cross-platform builds (5 targets) and automatic GitHub Release creation.
+Install script at `install.sh`: curl-pipe-sh installer that detects OS/arch and downloads the latest release.
+Go 1.25+ required (per `go.mod`).
 
 ## Test
 
@@ -40,6 +43,12 @@ cmd/                 → cobra commands (one file per subcommand)
   import.go          → ccswap import (detects env config from settings.json)
   integration_test.go→ end-to-end tests across commands
   completion_test.go → shell completion tests
+.github/
+  workflows/
+    ci.yaml          → test + vet on push/PR
+    release.yaml     → goreleaser release on v* tags
+.goreleaser.yaml     → cross-platform build config (5 targets)
+install.sh           → curl-pipe-sh installer
 internal/
   config/            → providers.yaml, state.yaml, paths, validation, env expansion
   claude/            → settings.json read/write/merge
@@ -53,6 +62,7 @@ internal/
 - **Atomic writes everywhere**: write to temp file → `os.Rename()` to final path. Applies to `settings.json`, `providers.yaml`, and `state.yaml`.
 - **Env var interpolation**: `os.ExpandEnv` applied to `auth_token`, `base_url`, and model names in `providers.yaml` via `$VAR` or `${VAR}` syntax. If `auth_token` is empty after expansion, the operation fails (prevents writing empty tokens).
 - **Exit codes**: 0 = success, 1 = user error, 2 = system error/panic. Implemented via `exitFunc` var in root.go (overridable in tests).
+- **CI & Releases**: push/PR triggers test+vet via `.github/workflows/ci.yaml`. Pushing a `v*` tag triggers `.github/workflows/release.yaml` → goreleaser builds 5 platform binaries → creates GitHub Release. Users install via `install.sh` or download from Releases page.
 - **Shell completion**: `ccswap completion bash|zsh|fish|powershell` generates shell completion scripts. `use`, `edit`, and `remove` commands support tab-completion of provider names via `completeProviderNames` (defined in `use.go`).
 - **Owner-only permissions**: `SaveProviders` writes `providers.yaml` with mode `0600` (owner read/write only) to protect API keys in the file.
 - **Env var expansion in list**: `ccswap list` expands env vars in provider config before comparing to `settings.json` for active-provider detection, so providers using `$VAR` auth tokens still match correctly.
