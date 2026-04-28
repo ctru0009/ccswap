@@ -2,7 +2,6 @@ package claude
 
 import (
 	"encoding/json"
-	"os"
 	"testing"
 
 	"github.com/ctru0009/ccswap/internal/config"
@@ -212,8 +211,7 @@ func TestMerge_StringConversionOfTimeoutMs(t *testing.T) {
 }
 
 func TestMerge_EnvVarExpansion(t *testing.T) {
-	os.Setenv("ZAI_API_KEY", "expanded-key-value")
-	defer os.Unsetenv("ZAI_API_KEY")
+	t.Setenv("ZAI_API_KEY", "expanded-key-value")
 
 	settings := map[string]json.RawMessage{
 		"env": json.RawMessage(`{}`),
@@ -245,7 +243,7 @@ func TestMerge_EnvVarExpansion(t *testing.T) {
 }
 
 func TestMerge_EmptyAuthTokenAfterExpansion_Error(t *testing.T) {
-	os.Unsetenv("MISSING_VAR")
+	t.Setenv("MISSING_VAR", "")
 
 	settings := map[string]json.RawMessage{
 		"env": json.RawMessage(`{}`),

@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -279,7 +280,7 @@ func TestValidateProvider_RequiredFields(t *testing.T) {
 				t.Errorf("ValidateProvider() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if err != nil && tt.errMsg != "" {
-				if !contains(err.Error(), tt.errMsg) {
+				if !strings.Contains(err.Error(), tt.errMsg) {
 					t.Errorf("expected error to contain %q, got %q", tt.errMsg, err.Error())
 				}
 			}
@@ -325,18 +326,11 @@ func TestValidateProvider_URLValidation(t *testing.T) {
 // --- TestEnvVarExpansion ---
 
 func TestEnvVarExpansion(t *testing.T) {
-	os.Setenv("CCSWAP_TEST_TOKEN", "expanded-token")
-	os.Setenv("CCSWAP_TEST_URL", "https://expanded.example.com")
-	os.Setenv("CCSWAP_TEST_SONNET", "expanded-sonnet")
-	os.Setenv("CCSWAP_TEST_OPUS", "expanded-opus")
-	os.Setenv("CCSWAP_TEST_HAIKU", "expanded-haiku")
-	defer func() {
-		os.Unsetenv("CCSWAP_TEST_TOKEN")
-		os.Unsetenv("CCSWAP_TEST_URL")
-		os.Unsetenv("CCSWAP_TEST_SONNET")
-		os.Unsetenv("CCSWAP_TEST_OPUS")
-		os.Unsetenv("CCSWAP_TEST_HAIKU")
-	}()
+	t.Setenv("CCSWAP_TEST_TOKEN", "expanded-token")
+	t.Setenv("CCSWAP_TEST_URL", "https://expanded.example.com")
+	t.Setenv("CCSWAP_TEST_SONNET", "expanded-sonnet")
+	t.Setenv("CCSWAP_TEST_OPUS", "expanded-opus")
+	t.Setenv("CCSWAP_TEST_HAIKU", "expanded-haiku")
 
 	p := Provider{
 		AuthToken: "$CCSWAP_TEST_TOKEN",
@@ -373,9 +367,7 @@ func TestEnvVarExpansion(t *testing.T) {
 // --- TestEnvVarExpansion_MissingVar_WarnsAndFails ---
 
 func TestEnvVarExpansion_MissingVar_WarnsAndFails(t *testing.T) {
-	// Ensure the env var is NOT set
-	os.Unsetenv("CCSWAP_NONEXISTENT_TOKEN")
-	defer os.Unsetenv("CCSWAP_NONEXISTENT_TOKEN")
+	t.Setenv("CCSWAP_NONEXISTENT_TOKEN", "")
 
 	p := Provider{
 		AuthToken: "$CCSWAP_NONEXISTENT_TOKEN",
@@ -391,24 +383,9 @@ func TestEnvVarExpansion_MissingVar_WarnsAndFails(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error when auth_token env var is missing, got nil")
 	}
-	if !contains(err.Error(), "auth_token") {
+	if !strings.Contains(err.Error(), "auth_token") {
 		t.Errorf("expected error to mention 'auth_token', got %q", err.Error())
 	}
-}
-
-// --- helper ---
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsStr(s, substr))
-}
-
-func containsStr(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }
 
 func TestLoadProviders_NoProvidersKey(t *testing.T) {
@@ -424,10 +401,10 @@ func TestLoadProviders_NoProvidersKey(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for YAML with no providers key, got nil")
 	}
-	if !contains(err.Error(), "no 'providers' key") {
+	if !strings.Contains(err.Error(), "no 'providers' key") {
 		t.Errorf("error should mention 'no providers key', got: %v", err)
 	}
-	if !contains(err.Error(), "ccswap init") {
+	if !strings.Contains(err.Error(), "ccswap init") {
 		t.Errorf("error should mention 'ccswap init', got: %v", err)
 	}
 }
@@ -473,7 +450,7 @@ func TestLoadProviders_MissingFile_ActionableMessage(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for missing file, got nil")
 	}
-	if !contains(err.Error(), "ccswap init") {
+	if !strings.Contains(err.Error(), "ccswap init") {
 		t.Errorf("error should mention 'ccswap init', got: %v", err)
 	}
 }
