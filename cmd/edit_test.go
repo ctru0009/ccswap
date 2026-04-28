@@ -379,3 +379,35 @@ func TestEdit_NoArgs(t *testing.T) {
 		t.Fatal("expected error when no provider arg given, got nil")
 	}
 }
+
+func TestLaunchEditor_SplitsEditorArgs(t *testing.T) {
+	var gotCmd string
+	var gotArgs []string
+	origLaunchFunc := editorLaunchFunc
+	editorLaunchFunc = func(editor string, tmpPath string) error {
+		parts := strings.Fields(editor)
+		gotCmd = parts[0]
+		gotArgs = append(parts[1:], tmpPath)
+		return nil
+	}
+	t.Cleanup(func() { editorLaunchFunc = origLaunchFunc })
+
+	// Simulate EDITOR="code --wait" — should split into ["code", "--wait", tmpPath]
+	err := editorLaunchFunc("code --wait", "/tmp/test.yaml")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if gotCmd != "code" {
+		t.Errorf("expected command %q, got %q", "code", gotCmd)
+	}
+	if len(gotArgs) != 2 || gotArgs[0] != "--wait" || gotArgs[1] != "/tmp/test.yaml" {
+		t.Errorf("expected args [--wait /tmp/test.yaml], got %v", gotArgs)
+	}
+}
+
+func TestLaunchEditor_EmptyEditor(t *testing.T) {
+	err := launchEditor("", "/tmp/test.yaml")
+	if err == nil {
+		t.Fatal("expected error for empty editor, got nil")
+	}
+}

@@ -124,7 +124,12 @@ func resolveEditor() string {
 }
 
 func launchEditor(editor string, tmpPath string) error {
-	cmd := exec.Command("sh", "-c", editor+" "+tmpPath)
+	parts := strings.Fields(editor)
+	if len(parts) == 0 {
+		return fmt.Errorf("editor command is empty")
+	}
+	args := append(parts[1:], tmpPath)
+	cmd := exec.Command(parts[0], args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
