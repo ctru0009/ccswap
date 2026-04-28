@@ -74,6 +74,12 @@ func SaveProviders(path string, config *ProvidersConfig) error {
 	}
 	tmpName := tmp.Name()
 
+	if err := tmp.Chmod(0600); err != nil {
+		tmp.Close()
+		os.Remove(tmpName)
+		return fmt.Errorf("set permissions: %w", err)
+	}
+
 	if _, err := tmp.Write(data); err != nil {
 		tmp.Close()
 		os.Remove(tmpName)
