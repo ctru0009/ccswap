@@ -7,6 +7,10 @@
 [![Go Version](https://img.shields.io/badge/go-%3E%3D1.25-blue)](https://go.dev)
 [![CI](https://github.com/ctru0009/ccswap/actions/workflows/ci.yaml/badge.svg)](https://github.com/ctru0009/ccswap/actions/workflows/ci.yaml)
 
+<p align="center">
+  <img src="./demo.gif" alt="ccswap demo" width="800">
+</p>
+
 ---
 
 ## Why ccswap?
