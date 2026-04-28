@@ -369,7 +369,7 @@ func TestImport_MalformedSettings(t *testing.T) {
 	}
 }
 
-func TestImport_PreserversExistingProviders(t *testing.T) {
+func TestImport_PreservesExistingProviders(t *testing.T) {
 	configDir := t.TempDir()
 	claudeDir := t.TempDir()
 
@@ -473,5 +473,100 @@ func TestImport_NoProvidersFile(t *testing.T) {
 	}
 	if !strings.Contains(string(data), "imported") {
 		t.Errorf("providers.yaml should contain 'imported', got: %s", string(data))
+	}
+}
+
+func TestImport_WarnsEmptyAuthToken(t *testing.T) {
+	configDir := t.TempDir()
+	claudeDir := t.TempDir()
+
+	if err := os.WriteFile(filepath.Join(configDir, "providers.yaml"), []byte("providers: {}\n"), 0644); err != nil {
+		t.Fatalf("failed to write providers.yaml: %v", err)
+	}
+
+	// base_url but no auth_token
+	writeTestSettings(t, claudeDir, map[string]interface{}{
+		"env": map[string]string{
+			"ANTHROPIC_BASE_URL": "https://example.com/v1",
+		},
+	})
+
+	input := "notoken\n"
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe: %v", err)
+	}
+
+	root := newImportRootCmd()
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"--config", configDir, "import"})
+	root.SetIn(r)
+
+	origSettingsPath := importSettingsPath
+	importSettingsPath = func() string { return filepath.Join(claudeDir, "settings.json") }
+	t.Cleanup(func() { importSettingsPath = origSettingsPath })
+
+	go func() {
+		w.WriteString(input)
+		w.Close()
+	}()
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	output := buf.String()
+	if !strings.Contains(output, "no auth token detected") {
+		t.Errorf("output should warn about missing auth token, got: %q", output)
+	}
+}
+
+func TestImport_WarnsMissingModels(t *testing.T) {
+	configDir := t.TempDir()
+	claudeDir := t.TempDir()
+
+	if err := os.WriteFile(filepath.Join(configDir, "providers.yaml"), []byte("providers: {}\n"), 0644); err != nil {
+		t.Fatalf("failed to write providers.yaml: %v", err)
+	}
+
+	// base_url and auth_token but no models
+	writeTestSettings(t, claudeDir, map[string]interface{}{
+		"env": map[string]string{
+			"ANTHROPIC_BASE_URL":  "https://example.com/v1",
+			"ANTHROPIC_AUTH_TOKEN": "some-token",
+		},
+	})
+
+	input := "nomodels\n"
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe: %v", err)
+	}
+
+	root := newImportRootCmd()
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"--config", configDir, "import"})
+	root.SetIn(r)
+
+	origSettingsPath := importSettingsPath
+	importSettingsPath = func() string { return filepath.Join(claudeDir, "settings.json") }
+	t.Cleanup(func() { importSettingsPath = origSettingsPath })
+
+	go func() {
+		w.WriteString(input)
+		w.Close()
+	}()
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	output := buf.String()
+	if !strings.Contains(output, "models are missing") {
+		t.Errorf("output should warn about missing models, got: %q", output)
 	}
 }

@@ -137,6 +137,18 @@ func runImport(cmd *cobra.Command) error {
 		},
 	}
 
+	// Import does not call ValidateProvider because settings.json may legitimately
+	// have partial config (e.g. base_url with no model overrides). The base_url is
+	// guaranteed non-empty since we check for it above. Warn about missing fields.
+	if authToken == "" {
+		yellow := color.New(color.FgYellow).SprintFunc()
+		fmt.Fprintf(out, "%s Warning: no auth token detected. `ccswap use` will fail without one.\n", yellow("⚠"))
+	}
+	if sonnet == "" || opus == "" || haiku == "" {
+		yellow := color.New(color.FgYellow).SprintFunc()
+		fmt.Fprintf(out, "%s Warning: some models are missing. `ccswap use` will not override them.\n", yellow("⚠"))
+	}
+
 	cfg.Providers[name] = provider
 
 	if err := config.SaveProviders(providersPath, cfg); err != nil {
