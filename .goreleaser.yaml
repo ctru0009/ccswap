@@ -41,5 +41,22 @@ snapshot:
   version_template: '{{ incpatch .Version }}-next'
 
 changelog:
-  sort: asc
   use: github
+  groups:
+    - title: Features
+      regexp: '^feat(\(.+\))?:'
+      order: 0
+    - title: Bug Fixes
+      regexp: '^fix(\(.+\))?:'
+      order: 1
+    - title: Documentation
+      regexp: '^docs(\(.+\))?:'
+      order: 2
+    - title: Other
+      order: 999
+  filters:
+    exclude:
+      - '^docs: update'
+      - '^docs: add'
+      - '^chore'
+      - Merge pull request
