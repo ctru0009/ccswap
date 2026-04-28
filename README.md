@@ -28,10 +28,13 @@ All swaps are **atomic** and **non-destructive** — your existing Claude Code s
 - ✨ **Single-command switching** — `ccswap use <provider>` in under 500ms
 - 🔒 **Secure by default** — API keys stored separately, masked in all output
 - 🛡️ **Non-destructive** — only touches the `env` block in `settings.json`
+- ✅ **Shell completions** — `bash`, `zsh`, `fish` tab completion for provider names
 - 🔄 **Atomic writes** — temp file + rename; never leaves a corrupted config
 - 💾 **Automatic backups** — every write creates a `.ccswap.bak` first
 - 🔧 **Environment variable interpolation** — `$ANTHROPIC_API_KEY` in YAML config
+- 🔒 **Owner-only config** — `providers.yaml` written with `0600` permissions to protect API keys
 - 📋 **Provider management** — add, edit, list, remove providers interactively
+- 📥 **Import from settings** — `ccswap import` detects your current Claude Code config and saves it as a named profile
 - 🖥️ **Cross-platform** — Linux, macOS, and Windows
 
 ---
@@ -94,6 +97,8 @@ ccswap status
 | `ccswap list` | List all providers in a table |
 | `ccswap edit <provider>` | Open provider in `$EDITOR` for editing |
 | `ccswap remove <provider>` | Remove a provider profile |
+| `ccswap import` | Import current Claude Code settings as a named provider profile |
+| `ccswap completion <shell>` | Generate shell completion script (bash, zsh, fish, powershell) |
 
 ### `ccswap use`
 
@@ -154,6 +159,45 @@ Timeout (ms) [3000000]:
 ```
 
 *Auth token is hidden when input is a terminal (uses `term.ReadPassword`).*
+
+### `ccswap import`
+
+Detect your current Claude Code provider configuration and save it as a named profile:
+
+```bash
+$ ccswap import
+→ Detected provider configuration:
+  Base URL:  https://api.anthropic.com
+  Sonnet:    claude-sonnet-4-20250514
+  Opus:      claude-opus-4-20250514
+  Haiku:     claude-haiku-3-5-20250101
+  Auth:      sk-ant-...y456
+
+Provider name: anthropic
+✓ Provider anthropic imported. Run: ccswap use anthropic
+```
+
+If the detected configuration already matches an existing provider, `ccswap import` will tell you which one so you can `ccswap use` it directly — no duplicates.
+
+### `ccswap completion`
+
+Generate shell completion scripts:
+
+```bash
+# Bash
+ccswap completion bash >> ~/.bashrc
+
+# Zsh
+ccswap completion zsh > "${fpath[1]}/_ccswap"
+
+# Fish
+ccswap completion fish > ~/.config/fish/completions/ccswap.fish
+
+# PowerShell
+ccswap completion powershell >> $PROFILE
+```
+
+The `use`, `edit`, and `remove` commands support tab-completion of provider names.
 
 ---
 
@@ -261,9 +305,9 @@ Tests are fully isolated using `t.TempDir()` — no external services or shared 
 - [ ] **Binary releases** — GitHub Actions + goreleaser for automatic cross-platform builds
 - [ ] **`ccswap watch`** — Detect Claude Code rate-limit errors and auto-switch providers
 - [ ] **`ccswap rotate`** — Cycle through a configured provider rotation
-- [ ] **Shell completions** — `bash`, `zsh`, `fish` tab completion for provider names
+- [x] ~~**Shell completions** — `bash`, `zsh`, `fish` tab completion for provider names~~
+- [x] ~~**`ccswap import`** — Detect existing provider config in `settings.json` and save as a named profile~~
 - [ ] **Keychain integration** — Store API keys in OS keychain instead of plaintext YAML
-- [ ] **`ccswap import`** — Detect existing provider config in `settings.json` and save as a named profile
 
 ---
 
