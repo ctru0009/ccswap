@@ -28,8 +28,6 @@ case "$ARCH" in
     ;;
 esac
 
-# On Windows, we use a different binary name
-BINARY="ccswap"
 EXT=""
 if [ "$OS" = "windows" ]; then
   EXT=".exe"
